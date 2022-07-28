@@ -140,6 +140,9 @@ classdef okusbfrontpanel < handle
         end
         
         function errorCode = SetWireInValue(obj, ep, value, mask)
+            % Wire in and wire out values may not be set on the FPGA until
+            % 'UpdateWire[In|Out]s' is called. This behavior is device
+            % dependent.
             errorCode = calllib('okFrontPanel', 'okFrontPanel_SetWireInValue', obj.hnd, ep, value, mask);
         end
         
@@ -161,6 +164,10 @@ classdef okusbfrontpanel < handle
         
         function errorCode = ConfigureFPGA(obj, filename)
             errorCode = calllib('okFrontPanel', 'okFrontPanel_ConfigureFPGA', obj.hnd, filename);
+        end
+        
+        function settings = GetDeviceSettings(obj)
+            
         end
     end
 end
