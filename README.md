@@ -1,7 +1,10 @@
 # opalkelly-frontpanel-api-matlab
  MATLAB API wrapper for Opal Kelly FrontPanel
+ 
  Existing API wrapper from Opal Kelly does not appear to be functional as of 2022-09-15, necessitating this custom wrapper.
+ 
  API Reference: https://library.opalkelly.com/library/FrontPanelAPI/annotated.html
+ 
  
 ## Requirements
 - Opal Kelly FrontPanel SDK (must create an account with Opal Kelly PINS to download)
