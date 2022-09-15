@@ -9,7 +9,7 @@
 
 ## Installation
 - Download the Opal Kelly FrontPanel SDK
-- Copy 'include' and 'lib' folders into the project root
+- Copy 'include' and 'lib' folders from OK FP SDK into the project root
 - Add the project folder to the path
 
 ## Example Usage
