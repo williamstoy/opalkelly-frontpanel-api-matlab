@@ -9,27 +9,30 @@
 
 ## Installation
 - Download the Opal Kelly FrontPanel SDK
-- Copy files in 'include' and 'lib' folders into corresponding folders at the project root
+- Copy 'include' and 'lib' folders into corresponding into the project root
 - Add the project folder to the path
 
 ## Example Usage
 ```
 sn = '##########'; % INSERT YOUR OPAL KELLY BOARD'S SERIAL NUMBER HERE
 
-if ~libisloaded('okFrontPanel')
-	loadlibrary('okFrontPanel', 'okFrontPanel.h');
+okobj = okusbfrontpanel();
+
+if isempty(okobj.availableDevices)
+    disp('No Opal Kelly Devices Found');
+    return;
 end
 
-xptr = calllib('okFrontPanel', 'okFrontPanel_Construct');
+% open the first opal kelly device
+okobj.OpenBySerial(okobj.availableDevices(1).serialNumber);
 
-okobj = okusbfrontpanel(xptr);
-openbyserial(okobj, sn)
+sn = okobj.GetSerialNumber();
+v_major = okobj.GetDeviceMajorVersion();
+v_minor = okobj.GetDeviceMinorVersion();
 
-% get the model number of the first device
-display(okobj)
-isopen(okobj)
-calllib('okFrontPanel', 'okFrontPanel_Close', xptr)
-isopen(okobj)
+fprintf(1, 'SN: %s (Version %d.%d)\n', sn, v_major, v_minor);
 
-calllib('okFrontPanel', 'okFrontPanel_Destruct', xptr);
+okobj.Close();
+
+clear okobj;
 ```
