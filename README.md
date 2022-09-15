@@ -16,7 +16,7 @@
 - Add the project folder to the path
 
 ## Example Usage
-```
+```matlab
 sn = '##########'; % INSERT YOUR OPAL KELLY BOARD'S SERIAL NUMBER HERE
 
 okobj = okusbfrontpanel();
