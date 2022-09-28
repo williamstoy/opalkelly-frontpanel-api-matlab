@@ -17,8 +17,6 @@
 
 ## Example Usage
 ```matlab
-sn = '##########'; % INSERT YOUR OPAL KELLY BOARD'S SERIAL NUMBER HERE
-
 okobj = okusbfrontpanel();
 
 if isempty(okobj.availableDevices)
