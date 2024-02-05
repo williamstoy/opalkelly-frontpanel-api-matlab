@@ -1,12 +1,24 @@
 % to extend, read the function list by executing:
 % libfunctionsview('okFrontPanel')
 
+% MAY NEED TO ADDRESS TO PREVENT MEMORY LEAKS?
+%Matlab API
+
+%While the above example shows how to use the FrontPanel DLL from within Matlab, we have already provided a more thorough version of this API for your usage.  It is provided as a fully-functioning sample of the DLL usage from within Matlab and utilizes Matlab’s object-oriented structure to provide an API that is very similar to the C++ API in usage.
+%DLL Header File
+
+%Due to a bug in Matlab’s DLL usage, a slightly modified DLL header file must be used when accessing the API through Matlab.  This revised header defines the HANDLE objects as unsigned long rather than void *.  If the revised header file is not used, memory leaks will occur in Matlab.
+
+
+% @todo: break device settings out into its own class
+
 
 classdef okusbfrontpanel < handle
     properties
-       hnd % okFrontPanel_HANDLE
-       availableDevices
-       connectedDevice
+       hnd; % okFrontPanel_HANDLE
+       availableDevices;
+       connectedDevice;
+       settings;
        
        verbose = false;
        
@@ -31,6 +43,8 @@ classdef okusbfrontpanel < handle
             end
             
             obj.hnd = calllib('okFrontPanel', 'okFrontPanel_Construct');
+            
+            obj.settings.hnd = calllib('okFrontPanel', 'okDeviceSettings_Construct');
             
             obj.GetDeviceList();
         end
@@ -74,6 +88,14 @@ classdef okusbfrontpanel < handle
             if isstring(number) || ischar(number)
                 output = ['"', char(number), '"'];
                 return;
+            end
+            
+            % @todo: properly handle the case where "number" is actually a
+            % matrix and display the contents. Probably should iterate
+            % through the contents of the matrix and display that way.
+            if ismatrix(number) || ~isnumeric(number) || isnan(number)
+                output = 'NaN';
+                return; 
             end
             
             switch(conversionType)
@@ -122,6 +144,43 @@ classdef okusbfrontpanel < handle
                 obj.availableDevices(j).boardModel = obj.GetDeviceListModel(j-1);
                 obj.availableDevices(j).serialNumber = obj.GetDeviceListSerial(j-1);
             end
+        end
+        
+        
+        
+        function errorCode = GetDeviceSettings(obj)
+            errorCode = calllib('okFrontPanel', 'okFrontPanel_GetDeviceSettings', obj.hnd, obj.settings.hnd);
+            
+            obj.DisplayOutput({}, {}, {},...
+                              {errorCode}, {'errorCode'}, {'s'});
+        end
+        
+        
+        
+        function [errorCode, value] = DeviceSettingsGetInt(obj, key)
+            [errorCode, ~, ~, value] = calllib('okFrontPanel', 'okDeviceSettings_GetInt', obj.settings.hnd, key, 0);
+            
+            
+            obj.DisplayOutput({key}, {'key'}, {'s'},...
+                              {errorCode, value}, {'errorCode', 'value'}, {'s', 'all'});
+        end
+        
+        
+        
+        function errorCode = DeviceSettingsSetInt(obj, key, value)
+            errorCode = calllib('okFrontPanel', 'okDeviceSettings_SetInt', obj.settings.hnd, key, value);
+            
+            obj.DisplayOutput({key, value}, {'key', 'value'}, {'s', 'd'},...
+                              {errorCode}, {'errorCode'}, {'s'});
+        end
+        
+        
+        
+        function errorCode = DeviceSettingsSave(obj)
+            errorCode = calllib('okFrontPanel', 'okDeviceSettings_Save', obj.settings.hnd);
+            
+            obj.DisplayOutput({}, {}, {},...
+                              {errorCode}, {'errorCode'}, {'s'});
         end
         
         
@@ -284,7 +343,7 @@ classdef okusbfrontpanel < handle
         function wireOutValue = GetWireOutValue(obj, epAddr)
             obj.UpdateWireOuts();
             
-            wireOutValue = calllib('okFrontPanel', 'okFrontPanel_GetWireOutValue', obj.hnd, int32(epAddr));
+            wireOutValue = calllib('okFrontPanel', 'okFrontPanel_GetWireOutValue', obj.hnd, uint16(epAddr));
             
             obj.DisplayOutput({epAddr}, {'epAddr'}, {'all'},...
                               {wireOutValue}, {'wireOutValue'}, {'all'});
@@ -302,7 +361,7 @@ classdef okusbfrontpanel < handle
         
         
         function [errorCode, wireInValue] = GetWireInValue(obj, epAddr)
-            [errorCode, ~, wireInValue] = calllib('okFrontPanel', 'okFrontPanel_GetWireInValue', obj.hnd, int32(epAddr), uint32(0));
+            [errorCode, ~, wireInValue] = calllib('okFrontPanel', 'okFrontPanel_GetWireInValue', obj.hnd, uint16(epAddr), uint32(0));
             
             if ~strcmp(errorCode, 'ok_NoError')
                 wireInValue = NaN;
@@ -318,12 +377,12 @@ classdef okusbfrontpanel < handle
             % Wire in and wire out values may not be set on the FPGA until
             % 'UpdateWire[In|Out]s' is called. This behavior is device
             % dependent.
-            errorCode = calllib('okFrontPanel', 'okFrontPanel_SetWireInValue', obj.hnd, int32(epAddr), uint32(value), uint32(mask));
-            
-            obj.UpdateWireIns();
+            errorCode = calllib('okFrontPanel', 'okFrontPanel_SetWireInValue', obj.hnd, uint16(epAddr), uint32(value), uint32(mask));
             
             obj.DisplayOutput({epAddr, value, mask}, {'epAddr', 'value', 'mask'}, {'all', 'all', 'all'},...
                               {errorCode}, {'errorCode'}, {'s'});
+                          
+            obj.UpdateWireIns();
         end
         
         
@@ -354,10 +413,19 @@ classdef okusbfrontpanel < handle
             
             obj.DisplayOutput({filename}, {'filename'}, {'s'},...
                               {errorCode}, {'errorCode'}, {'s'});
+                          
+            if obj.verbose
+                fileInfo = dir(filename);
+                fileTimeStamp = fileInfo.date;
+                
+                fprintf(1, 'LAST UPDATED                 : %s\n', fileTimeStamp);
+            end
         end
         
         
         
+        % @todo: properly allocate the data pointer to be the size of the
+        % expected data (maybe???)
         function [errorCode, data] = ReadRegister(obj, regAddr)
            [errorCode, ~ , data] = calllib('okFrontPanel', 'okFrontPanel_ReadRegister', obj.hnd, uint32(regAddr), uint32(0));
            
@@ -382,10 +450,52 @@ classdef okusbfrontpanel < handle
         
         % @todo: probably wrong
         function errorCode = WriteToPipeIn(obj, epAddr, data)
-            errorCode = calllib('okFrontPanel', 'okFrontPanel_WriteToPipeIn', obj.hnd, int32(epAddr), int64(length(data)), char(data));
+            errorCode = calllib('okFrontPanel', 'okFrontPanel_WriteToPipeIn', obj.hnd, uint16(epAddr), uint32(length(data)), char(data));
             
             obj.DisplayOutput({epAddr, length(data), char(data)}, {'epAddr', 'length', 'data'}, {'all', 'all', 's'},...
                 {errorCode}, {'errorCode'}, {'s'});
+        end
+        
+        
+        
+        function errorCode = ActivateTriggerIn(obj, epAddr, bit)
+            errorCode = calllib('okFrontPanel', 'okFrontPanel_ActivateTriggerIn', obj.hnd, uint16(epAddr), bit);
+            
+            obj.DisplayOutput({epAddr, bit}, {'epAddr', 'bit'}, {'all', 'all'},...
+                              {errorCode}, {'errorCode'}, {'s'});
+        end
+        
+        % long 32 bits uint32
+        % int is 16 bits uint16
+        % @todo: properly allocate the data pointer to be the size of the
+        % expected data (maybe???)
+        function [errorCode, data] = ReadFromBlockPipeOut(obj, epAddr, blockSize, blockLength)
+            [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromBlockPipeOut', obj.hnd, uint16(epAddr), uint16(blockSize), uint32(blockLength), uint8(0));
+            
+            obj.DisplayOutput({epAddr, uint16(blockSize), uint32(blockLength)}, {'epAddr', 'blockSize', 'length'}, {'all', 'all', 'all'},...
+                              {errorCode, data}, {'errorCode', 'data'}, {'s', 'all'});
+        end
+        
+        % Nico made this, CHECK
+        % @todo: turn these back into 32 bit integers. Currently series of
+        % 4x 8b ints
+        function [errorCode, data] = ReadFromPipeOut(obj, epAddr, len)
+            [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromPipeOut', obj.hnd, uint16(epAddr), uint32(len), uint8(zeros(1, len*4)));
+            
+            obj.DisplayOutput({epAddr, uint32(len)}, {'epAddr', 'length'}, {'all', 'all'},...
+                              {errorCode, data}, {'errorCode', 'data'}, {'s', 'all'});
+        end
+        
+        function output = WriteToBlockPipeIn(obj, epAddr, blockSize, blockLength, data)
+            output = calllib('okFrontPanel', 'okFrontPanel_WriteToBlockPipeIn', obj.hnd, uint16(epAddr), uint16(blockSize), uint32(blockLength), uint8(data));
+            
+            if output >= 0
+                obj.DisplayOutput({uint16(epAddr), uint16(blockSize), uint32(blockLength), char(data)}, {'epAddr', 'blockSize', 'length(data)', 'data'}, {'all', 'all', 'all', 's'},...
+                              {output}, {'bytesTransmitted'}, {'all'});
+            else
+                obj.DisplayOutput({uint16(epAddr), uint16(blockSize), uint32(blockLength), char(data)}, {'epAddr', 'blockSize', 'length(data)', 'data'}, {'all', 'all', 'all', 's'},...
+                              {output}, {'errorCode'}, {'s'});
+            end
         end
     end
 end
