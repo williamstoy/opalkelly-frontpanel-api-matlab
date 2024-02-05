@@ -8,12 +8,17 @@
  
 ## Requirements
 - Opal Kelly FrontPanel SDK (must create an account with Opal Kelly PINS to download)
-- MATLAB (Tested with v 2021b on Windows 10)
+- MATLAB (Tested with v 2023a on Windows 11)
 
 ## Installation
 - Download the Opal Kelly FrontPanel SDK
 - Copy 'include' and 'lib' folders from OK FP SDK into the project root
 - Add the project folder to the path
+- Configure MEX to use the Matlab MinGW64 Compiler (C):
+  - Run `mex -setup`
+  - Confirm that 'MEX configured to use 'MinGW64 Compiler (C)' for C language compilation.'
+  - If the MEX compiler is set to any other compiler, follow the instructions printed in the response to set the compiler to the 'MinGW64 Compiler (C)'
+    - e.g. `mex -setup:'C:\Program Files\MATLAB\R2023a\bin\win64\mexopts\mingw64.xml' C`
 
 ## Example Usage
 ```matlab
