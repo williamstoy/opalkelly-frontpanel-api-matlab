@@ -4,10 +4,10 @@
 % MAY NEED TO ADDRESS TO PREVENT MEMORY LEAKS?
 %Matlab API
 
-%While the above example shows how to use the FrontPanel DLL from within Matlab, we have already provided a more thorough version of this API for your usage.  It is provided as a fully-functioning sample of the DLL usage from within Matlab and utilizes Matlab’s object-oriented structure to provide an API that is very similar to the C++ API in usage.
+%While the above example shows how to use the FrontPanel DLL from within Matlab, we have already provided a more thorough version of this API for your usage.  It is provided as a fully-functioning sample of the DLL usage from within Matlab and utilizes Matlabï¿½s object-oriented structure to provide an API that is very similar to the C++ API in usage.
 %DLL Header File
 
-%Due to a bug in Matlab’s DLL usage, a slightly modified DLL header file must be used when accessing the API through Matlab.  This revised header defines the HANDLE objects as unsigned long rather than void *.  If the revised header file is not used, memory leaks will occur in Matlab.
+%Due to a bug in Matlabï¿½s DLL usage, a slightly modified DLL header file must be used when accessing the API through Matlab.  This revised header defines the HANDLE objects as unsigned long rather than void *.  If the revised header file is not used, memory leaks will occur in Matlab.
 
 
 % @todo: break device settings out into its own class
@@ -471,7 +471,7 @@ classdef okusbfrontpanel < handle
         % expected data (maybe???)
         function [errorCode, data] = ReadFromBlockPipeOut(obj, epAddr, blockSize, blockLength)
             [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromBlockPipeOut', obj.hnd, uint16(epAddr), uint16(blockSize), uint32(blockLength), uint8(0));
-            
+            data = bytes2ints(data);
             obj.DisplayOutput({epAddr, uint16(blockSize), uint32(blockLength)}, {'epAddr', 'blockSize', 'length'}, {'all', 'all', 'all'},...
                               {errorCode, data}, {'errorCode', 'data'}, {'s', 'all'});
         end
@@ -481,7 +481,7 @@ classdef okusbfrontpanel < handle
         % 4x 8b ints
         function [errorCode, data] = ReadFromPipeOut(obj, epAddr, len)
             [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromPipeOut', obj.hnd, uint16(epAddr), uint32(len), uint8(zeros(1, len*4)));
-            
+            data = bytes2ints(data);
             obj.DisplayOutput({epAddr, uint32(len)}, {'epAddr', 'length'}, {'all', 'all'},...
                               {errorCode, data}, {'errorCode', 'data'}, {'s', 'all'});
         end
@@ -497,5 +497,18 @@ classdef okusbfrontpanel < handle
                               {output}, {'errorCode'}, {'s'});
             end
         end
+
+        function data = bytes2ints(bytearray)
+            data = zeros(1, numel(bytearray) / 4, 'uint32');
+
+            % Iterate through the input array
+            for i = 1:4:numel(bytearray)
+                % Concatenate 4 bytes into a 32-bit integer
+                concatenatedValue = typecast(uint8(bytearray(i:i+3)), 'uint32');
+                % Assign the result
+                data((i+3)/4) = concatenatedValue;
+            end
+        end
     end
+
 end
