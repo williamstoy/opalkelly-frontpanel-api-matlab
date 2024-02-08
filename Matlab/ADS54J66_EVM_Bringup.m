@@ -155,14 +155,14 @@ okobj.SetWireInValue(timeMaxAddress, 10000, wireInMask);
 pause(2);
 
 % read from block throttled pipe out
-%[errorCode, data] = okobj.ReadFromBlockPipeOut(0xA0, 16, 32);
+[errorCode, data] = okobj.ReadFromBlockPipeOut(0xA0, 16, 32);
 %disp(data);
 
 %test trigger in bit 0
-okobj.ActivateTriggerIn(0x40,0);
+%okobj.ActivateTriggerIn(0x40,0);
 
 % read from pipe out
-[errorCode, data] = okobj.ReadFromPipeOut(0xA0, 32);
+%[errorCode, data] = okobj.ReadFromPipeOut(0xA0, 32);
 disp(data);
 
 

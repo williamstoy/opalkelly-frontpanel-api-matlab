@@ -465,23 +465,18 @@ classdef okusbfrontpanel < handle
                               {errorCode}, {'errorCode'}, {'s'});
         end
         
-        % long 32 bits uint32
-        % int is 16 bits uint16
-        % @todo: properly allocate the data pointer to be the size of the
-        % expected data (maybe???)
+
         function [errorCode, data] = ReadFromBlockPipeOut(obj, epAddr, blockSize, blockLength)
-            [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromBlockPipeOut', obj.hnd, uint16(epAddr), uint16(blockSize), uint32(blockLength), uint8(0));
-            data = bytes2ints(data);
+            [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromBlockPipeOut', obj.hnd, uint16(epAddr), uint16(blockSize), uint32(blockLength), uint8(zeros(1, blockLength*4)));
+            data = obj.bytes2ints(data);
             obj.DisplayOutput({epAddr, uint16(blockSize), uint32(blockLength)}, {'epAddr', 'blockSize', 'length'}, {'all', 'all', 'all'},...
                               {errorCode, data}, {'errorCode', 'data'}, {'s', 'all'});
         end
         
-        % Nico made this, CHECK
-        % @todo: turn these back into 32 bit integers. Currently series of
-        % 4x 8b ints
+
         function [errorCode, data] = ReadFromPipeOut(obj, epAddr, len)
             [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromPipeOut', obj.hnd, uint16(epAddr), uint32(len), uint8(zeros(1, len*4)));
-            data = bytes2ints(data);
+            data = obj.bytes2ints(data);
             obj.DisplayOutput({epAddr, uint32(len)}, {'epAddr', 'length'}, {'all', 'all'},...
                               {errorCode, data}, {'errorCode', 'data'}, {'s', 'all'});
         end
@@ -498,16 +493,9 @@ classdef okusbfrontpanel < handle
             end
         end
 
-        function data = bytes2ints(bytearray)
-            data = zeros(1, numel(bytearray) / 4, 'uint32');
-
-            % Iterate through the input array
-            for i = 1:4:numel(bytearray)
-                % Concatenate 4 bytes into a 32-bit integer
-                concatenatedValue = typecast(uint8(bytearray(i:i+3)), 'uint32');
-                % Assign the result
-                data((i+3)/4) = concatenatedValue;
-            end
+        function data = bytes2ints(obj, bytearray)
+            data = reshape(bytearray,[4,length(bytearray)/4]);
+            data = sum(uint32(data) .* uint32([1; 256; 256*256; 256^3]));
         end
     end
 
