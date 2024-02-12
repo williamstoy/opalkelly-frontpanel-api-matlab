@@ -467,16 +467,22 @@ classdef okusbfrontpanel < handle
         
 
         function [errorCode, data] = ReadFromBlockPipeOut(obj, epAddr, blockSize, blockLength)
-            [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromBlockPipeOut', obj.hnd, uint16(epAddr), uint16(blockSize), uint32(blockLength), uint8(zeros(1, blockLength*4)));
+            [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromBlockPipeOut', obj.hnd, uint16(epAddr), uint16(blockSize*4), uint32(blockLength*4), uint8(zeros(1, blockLength*4)));
+
+            % convert to 32 bit integers from bytes
             data = obj.bytes2ints(data);
+
             obj.DisplayOutput({epAddr, uint16(blockSize), uint32(blockLength)}, {'epAddr', 'blockSize', 'length'}, {'all', 'all', 'all'},...
                               {errorCode, data}, {'errorCode', 'data'}, {'s', 'all'});
         end
         
 
         function [errorCode, data] = ReadFromPipeOut(obj, epAddr, len)
-            [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromPipeOut', obj.hnd, uint16(epAddr), uint32(len), uint8(zeros(1, len*4)));
+            [errorCode, ~, data] = calllib('okFrontPanel', 'okFrontPanel_ReadFromPipeOut', obj.hnd, uint16(epAddr), uint32(len*4), uint8(zeros(1, len)));
+
+            % convert to 32 bit integers from bytes
             data = obj.bytes2ints(data);
+
             obj.DisplayOutput({epAddr, uint32(len)}, {'epAddr', 'length'}, {'all', 'all'},...
                               {errorCode, data}, {'errorCode', 'data'}, {'s', 'all'});
         end
@@ -493,9 +499,9 @@ classdef okusbfrontpanel < handle
             end
         end
 
-        function data = bytes2ints(obj, bytearray)
+        function data = bytes2ints(~, bytearray)
             data = reshape(bytearray,[4,length(bytearray)/4]);
-            data = sum(uint32(data) .* uint32([1; 256; 256*256; 256^3]));
+            data = uint32(sum(uint32(data) .* uint32([1; 256; 256*256; 256^3])));
         end
     end
 

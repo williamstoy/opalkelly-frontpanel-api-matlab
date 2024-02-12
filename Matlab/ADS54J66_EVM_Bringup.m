@@ -1,3 +1,15 @@
+
+% check if the okobj variable is set
+% if so, try to close the connection
+
+if exist('okobj', 'var')
+    okobj.DisplayComment('Disconnect from FPGA at program start...');
+    okobj.verbose = 0;
+    okobj.Close();
+
+    clear okobj;
+end
+
 clear; clc;
 
 folder = 'C:\Users\williamstoy\Documents\Github\k410t_jesd\k410t_jesd.runs\impl_1\';
@@ -152,19 +164,48 @@ okobj.SetWireInValue(vThresholdAddress, 2^5, wireInMask);
 okobj.SetWireInValue(timeMinAddress, 10, wireInMask);
 okobj.SetWireInValue(timeMaxAddress, 10000, wireInMask);
 
-pause(2);
+%Disable Test Mode Binary Counter
+disableTestMode = 1;
+okobj.ActivateTriggerIn(hex2dec('40'),disableTestMode);
 
 % read from block throttled pipe out
-[errorCode, data] = okobj.ReadFromBlockPipeOut(0xA0, 16, 32);
-%disp(data);
+%block size is always 8192 bytes,  
+for i = 1:1
+    fifoBufferSize = 8192; % equal to the depth of the buffer, # of samples
+    blockSize = 1024;
+    numBlocks = 1;
+    blocksToThrowOut = fifoBufferSize * 2 / blockSize; %throw out 2 buffers worth of data
+    [errorCode, data] = okobj.ReadFromBlockPipeOut(hex2dec('a0'), blockSize, blockSize * (blocksToThrowOut + numBlocks));
+    % throw out the first blocksToThrowOut blocks of data and keep the last numBlocks
 
-%test trigger in bit 0
-%okobj.ActivateTriggerIn(0x40,0);
+    data = data((blocksToThrowOut*blockSize+1):end);
+    
+    %channel A is the higher order 16 bits
+    %channel B is the lower order 16 bits
+    da = uint16(data)/4;
+    db = uint16(data/(pow2(16)));
 
-% read from pipe out
-%[errorCode, data] = okobj.ReadFromPipeOut(0xA0, 32);
-disp(data);
+    close all;
 
+    plot(data)
+    hold on;
+    plot(da);
+    hold on;
+    plot(db);
+    
+    % read from pipe out
+    if (disableTestMode == 0)
+        d = diff(int32(data));
+        if (sum(d == -16 | d == 2 | d == 0) == length(d))
+            disp('passed')
+        else
+            %disp(data);
+            disp(d);
+            disp('failed!!!!!!!!!')
+            break;
+        end
+    end
+end
 
 okobj.DisplayComment('Disconnect from FPGA');
 okobj.verbose = 0;
