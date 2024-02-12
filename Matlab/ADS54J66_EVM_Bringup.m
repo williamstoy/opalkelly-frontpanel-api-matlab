@@ -182,16 +182,14 @@ for i = 1:1
     
     %channel A is the higher order 16 bits
     %channel B is the lower order 16 bits
-    
-    db = typecast(data,uint16);
+    db = typecast(data,'int16');
 
     %separate into channels A and B
-    da = db(2:2:end)
-    db = db(1:2:end);
+    da = db(2:2:end)/4;
+    db = db(1:2:end)/4;
 
     %plot all data
     close all;
-    plot(data)
     hold on;
     plot(da);
     hold on;
